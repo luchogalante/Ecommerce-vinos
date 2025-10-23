@@ -1,1 +1,62 @@
-[]
+[
+  {
+    "id": "1",
+    "title": "Vino Malbec Reserva",
+    "description": "Vino tinto argentino con cuerpo, notas de ciruela y madera. Ideal para carnes rojas.",
+    "code": "MALB123",
+    "price": 8500,
+    "stock": 20,
+    "category": "Tintos",
+    "thumbnails": ["malbec_reserva.jpg"]
+  },
+  {
+    "id": "2",
+    "title": "Vino Cabernet Sauvignon Premium",
+    "description": "Cabernet con aroma intenso a frutas negras y final especiado.",
+    "code": "CAB456",
+    "price": 9200,
+    "stock": 15,
+    "category": "Tintos",
+    "thumbnails": ["cabernet_premium.jpg"]
+  },
+  {
+    "id": "3",
+    "title": "Vino Chardonnay Roble",
+    "description": "Vino blanco fermentado en barrica, con notas a vainilla y manzana verde.",
+    "code": "CHA789",
+    "price": 7800,
+    "stock": 25,
+    "category": "Blancos",
+    "thumbnails": ["chardonnay_roble.jpg"]
+  },
+  {
+    "id": "4",
+    "title": "Vino Rosé Patagónico",
+    "description": "Rosado elegante, aroma a frutillas frescas y excelente acidez.",
+    "code": "ROS101",
+    "price": 7200,
+    "stock": 18,
+    "category": "Rosados",
+    "thumbnails": ["rose_patagonico.jpg"]
+  },
+  {
+    "id": "5",
+    "title": "Vino Syrah Gran Cosecha",
+    "description": "Syrah intenso, con taninos firmes y notas a mora y pimienta negra.",
+    "code": "SYR202",
+    "price": 8800,
+    "stock": 12,
+    "category": "Tintos",
+    "thumbnails": ["syrah_gran_cosecha.jpg"]
+  },
+  {
+    "id": "6",
+    "title": "Vino Sauvignon Blanc Joven",
+    "description": "Vino blanco fresco y frutal, ideal para aperitivos o pescados.",
+    "code": "SBL333",
+    "price": 6900,
+    "stock": 30,
+    "category": "Blancos",
+    "thumbnails": ["sauvignon_blanc.jpg"]
+  }
+]
