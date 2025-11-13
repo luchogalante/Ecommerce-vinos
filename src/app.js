@@ -1,74 +1,70 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { engine } from "express-handlebars";
+import productsRouter from "./routes/products.router.js";
+import cartsRouter from "./routes/carts.router.js"; // ✅ Falta este import!
+import ProductManager from "./managers/ProductManager.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import handlebars from "express-handlebars";
+import mongoose from "mongoose";
 
-import productsRouter from "./routes/products.router.js";
-import cartsRouter from "./routes/carts.router.js";
-import ProductManager from "./managers/ProductManager.js";
-
-const app = express();
-const PORT = 8080;
-
-// 📂 Rutas absolutas
+// Fix para __dirname en ESModules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ⚙️ Middlewares
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer);
+
+// ✅ CONEXIÓN A MONGO ATLAS
+const MONGO_URL = "mongodb+srv://luchogalante:Millonarios10@cluster0.sxanjxx.mongodb.net/ecommerce?retryWrites=true&w=majority&appName=Cluster0";
+
+mongoose
+  .connect(MONGO_URL)
+  .then(() => console.log("🍃 Conectado a MongoDB Atlas OK"))
+  .catch((err) => console.log("❌ Error conectando a MongoDB:", err));
+
+// ✅ ProductManager usa JSON por ahora (más adelante lo migramos a Mongo)
+const productManager = new ProductManager(
+  path.join(__dirname, "data", "products.json")
+);
+
+// Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🧠 Configuración de Handlebars
-app.engine("handlebars", engine());
-app.set("view engine", "handlebars");
+// Handlebars config
+app.engine("handlebars", handlebars.engine());
 app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "handlebars");
 
-// 📦 Instancia del ProductManager
-const productManager = new ProductManager(path.join(__dirname, "data", "products.json"));
-
-// 🛣️ Rutas API
+// Rutas API
 app.use("/api/products", productsRouter);
-app.use("/api/carts", cartsRouter);
+app.use("/api/carts", cartsRouter); // ✅ Ahora sí funciona
 
-// 🏠 Vista Home
-app.get("/", async (req, res) => {
+// Vista Real Time Products
+app.get("/realtimeproducts", async (req, res) => {
   const products = await productManager.getProducts();
-  res.render("home", { products });
+  res.render("realTimeProducts", { products });
 });
 
-// ⚡ Vista en tiempo real
-app.get("/realtimeproducts", (req, res) => {
-  res.render("realTimeProducts"); // 👈 No pasamos los productos
+// Test route
+app.get("/", (req, res) => {
+  res.send("Servidor funcionando 🚀");
 });
 
-// 🚀 Servidor HTTP + Socket.io
-const httpServer = createServer(app);
-const io = new Server(httpServer);
-
-// 💬 WebSocket: conexión
+// Socket
 io.on("connection", async (socket) => {
-  console.log("🟢 Cliente conectado");
+  console.log("✅ Cliente conectado", socket.id);
 
-  // Enviar lista inicial al conectarse
-  socket.emit("updateProducts", await productManager.getProducts());
-
-  // Agregar producto
-  socket.on("addProduct", async (productData) => {
-    await productManager.addProduct(productData);
-    io.emit("updateProducts", await productManager.getProducts());
-  });
-
-  // Eliminar producto
-  socket.on("deleteProduct", async (id) => {
-    await productManager.deleteProduct(id);
-    io.emit("updateProducts", await productManager.getProducts());
-  });
+  const products = await productManager.getProducts();
+  socket.emit("updateProducts", products);
 });
 
-// 🟢 Iniciar servidor
+// Levantar server
+const PORT = 8080;
 httpServer.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+  console.log(`🔥 Servidor corriendo en http://localhost:${PORT}`);
 });

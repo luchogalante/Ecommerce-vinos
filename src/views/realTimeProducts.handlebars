@@ -3,9 +3,9 @@
 <!-- 🔥 Lista dinámica -->
 <ul id="productList">
   {{#each products}}
-    <li>
+    <li id="product-{{id}}">
       <strong>{{title}}</strong> - ${{price}}
-      <button onclick="deleteProduct('{{id}}')">🗑️ Eliminar</button>
+      <button onclick="deleteProduct('{{id}}')">Eliminar</button>
     </li>
   {{/each}}
 </ul>
@@ -14,6 +14,7 @@
 
 <!-- 📦 Formulario para agregar producto -->
 <h2>Agregar nuevo producto</h2>
+
 <form id="productForm">
   <input type="text" name="title" placeholder="Título" required>
   <input type="text" name="description" placeholder="Descripción" required>
@@ -27,5 +28,45 @@
 <hr>
 <a href="/">Volver al Home</a>
 
+<!-- ✅ Socket.io + script del cliente -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="/js/realtime.js"></script>
+<script>
+  const socket = io();
+
+  // ✅ Cuando llega un producto nuevo desde el backend
+  socket.on("productAdded", (product) => {
+    const list = document.getElementById("productList");
+    const li = document.createElement("li");
+    li.id = `product-${product.id}`;
+    li.innerHTML = `<strong>${product.title}</strong> - $${product.price}
+                    <button onclick="deleteProduct('${product.id}')">Eliminar</button>`;
+    list.appendChild(li);
+  });
+
+  // ✅ Cuando se elimina un producto desde backend
+  socket.on("productDeleted", (id) => {
+    const element = document.getElementById(`product-${id}`);
+    if (element) element.remove();
+  });
+
+  // ✅ Captura del submit del formulario (POST a /api/products)
+  document.getElementById("productForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+
+    await fetch("/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    e.target.reset(); // limpia formulario
+  });
+
+  // ✅ Eliminar producto
+  async function deleteProduct(id) {
+    await fetch(`/api/products/${id}`, { method: "DELETE" });
+  }
+</script>
