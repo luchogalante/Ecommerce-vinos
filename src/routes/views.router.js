@@ -1,24 +1,37 @@
 import { Router } from "express";
-import ProductManager from "../managers/ProductManager.js";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import ProductMongoManager from "../managers/ProductMongoManager.js";
 
 const router = Router();
-const productManager = new ProductManager(path.join(__dirname, "../data/products.json"));
+const productService = new ProductMongoManager();
 
-// Home
+// --------------------------------------
+// HOME (lista de productos desde Mongo)
+// --------------------------------------
 router.get("/", async (req, res) => {
-  const products = await productManager.getProducts();
-  res.render("home", { products });
+  try {
+    const result = await productService.getProducts({}, { limit: 100 });
+    const products = result.docs; // paginate devuelve docs
+
+    res.render("home", { products });
+  } catch (error) {
+    console.error("❌ Error cargando home:", error);
+    res.status(500).send("Error cargando home");
+  }
 });
 
-// Vista realtime con sockets
+// --------------------------------------
+// REAL TIME PRODUCTS (Socket + Mongo)
+// --------------------------------------
 router.get("/realtimeproducts", async (req, res) => {
-  const products = await productManager.getProducts();
-  res.render("realTimeProducts", { products });
+  try {
+    const result = await productService.getProducts({}, { limit: 100 });
+    const products = result.docs;
+
+    res.render("realTimeProducts", { products });
+  } catch (error) {
+    console.error("❌ Error cargando realtime:", error);
+    res.status(500).send("Error cargando vista realtime");
+  }
 });
 
 export default router;
