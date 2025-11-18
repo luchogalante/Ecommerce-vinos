@@ -1,0 +1,60 @@
+<h1>Productos</h1>
+
+<div>
+  {{#if products.length}}
+    <ul>
+      {{#each products}}
+        <li>
+          <strong>{{title}}</strong> - ${{price}}
+          <br>
+          {{description}}
+          <br>
+          <small>Categoría: {{category}} | Stock: {{stock}}</small>
+
+          <br><br>
+
+          <!-- Botón agregar al carrito -->
+          <button onclick="addToCart('{{_id}}')">
+            Agregar al carrito 🛒
+          </button>
+
+          <hr>
+        </li>
+      {{/each}}
+    </ul>
+  {{else}}
+    <p>No hay productos disponibles.</p>
+  {{/if}}
+</div>
+
+<!-- Paginación -->
+<div style="margin-top: 20px;">
+  {{#if hasPrevPage}}
+    <a href="{{prevLink}}">⬅ Anterior</a>
+  {{/if}}
+
+  {{#if hasNextPage}}
+    <a href="{{nextLink}}" style="margin-left: 10px;">Siguiente ➡</a>
+  {{/if}}
+</div>
+
+<script>
+  const CART_ID = "691ba4368290118739d01e1a";
+
+  async function addToCart(pid) {
+    try {
+      const res = await fetch(`/api/carts/${CART_ID}/product/${pid}`, {
+        method: "POST"
+      });
+
+      if (!res.ok) {
+        throw new Error("No se pudo agregar al carrito");
+      }
+
+      alert("Producto agregado al carrito 🛒");
+    } catch (error) {
+      console.error(error);
+      alert("Error agregando producto");
+    }
+  }
+</script>
