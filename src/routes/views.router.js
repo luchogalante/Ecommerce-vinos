@@ -7,10 +7,29 @@ const productService = new ProductMongoManager();
 const cartService = new CartMongoManager();
 
 // --------------------------------------
-// HOME
+// LOGIN
+// --------------------------------------
+router.get("/login", (req, res) => {
+  res.render("login");
+});
+
+// --------------------------------------
+// REGISTER (opcional)
+// --------------------------------------
+router.get("/register", (req, res) => {
+  res.render("register");
+});
+
+// --------------------------------------
+// HOME (PROTEGIDO)
 // --------------------------------------
 router.get("/", async (req, res) => {
   try {
+    // 🔐 Si no está logueado → login
+    if (!req.cookies.token) {
+      return res.redirect("/login");
+    }
+
     const result = await productService.getProducts({}, { limit: 100 });
     const products = result.docs;
 
@@ -21,10 +40,14 @@ router.get("/", async (req, res) => {
 });
 
 // --------------------------------------
-// REAL TIME
+// REAL TIME PRODUCTS
 // --------------------------------------
 router.get("/realtimeproducts", async (req, res) => {
   try {
+    if (!req.cookies.token) {
+      return res.redirect("/login");
+    }
+
     const result = await productService.getProducts({}, { limit: 100 });
     const products = result.docs;
 
@@ -35,10 +58,14 @@ router.get("/realtimeproducts", async (req, res) => {
 });
 
 // --------------------------------------
-// 🆕 VISTA /products → paginada
+// PRODUCTS (paginada)
 // --------------------------------------
 router.get("/products", async (req, res) => {
   try {
+    if (!req.cookies.token) {
+      return res.redirect("/login");
+    }
+
     const { page = 1 } = req.query;
 
     const result = await productService.getProducts({}, {
@@ -62,12 +89,15 @@ router.get("/products", async (req, res) => {
 });
 
 // --------------------------------------
-// 🆕 VISTA /carts/:cid → carrito populado
+// CART por ID
 // --------------------------------------
 router.get("/carts/:cid", async (req, res) => {
   try {
-    const cart = await cartService.getCartById(req.params.cid);
+    if (!req.cookies.token) {
+      return res.redirect("/login");
+    }
 
+    const cart = await cartService.getCartById(req.params.cid);
     res.render("cart", { cart });
   } catch (error) {
     console.log(error);

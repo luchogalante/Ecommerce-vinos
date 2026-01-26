@@ -1,19 +1,19 @@
 import { Router } from "express";
+import passport from "passport";
+import authorization from "../middlewares/authorization.middleware.js";
 import ProductMongoManager from "../managers/ProductMongoManager.js";
 
 const router = Router();
 const productService = new ProductMongoManager();
 
 // ------------------------------------------
-// GET /api/products → Listado con paginate
+// GET /api/products → público
 // ------------------------------------------
 router.get("/", async (req, res) => {
   try {
     const { limit, page, sort, query } = req.query;
-
     let filter = {};
 
-    // QUERY (categoría o disponibilidad)
     if (query) {
       if (query.includes(":")) {
         const [field, value] = query.split(":");
@@ -36,27 +36,16 @@ router.get("/", async (req, res) => {
       status: "success",
       payload: result.docs,
       totalPages: result.totalPages,
-      prevPage: result.prevPage,
-      nextPage: result.nextPage,
-      page: result.page,
-      hasPrevPage: result.hasPrevPage,
-      hasNextPage: result.hasNextPage,
-      prevLink: result.hasPrevPage
-        ? `/api/products?page=${result.prevPage}`
-        : null,
-      nextLink: result.hasNextPage
-        ? `/api/products?page=${result.nextPage}`
-        : null
+      page: result.page
     });
 
   } catch (error) {
-    console.error("Error en GET /api/products:", error);
     res.status(500).json({ error: "Error obteniendo productos" });
   }
 });
 
 // ------------------------------------------
-// GET /api/products/:pid → Producto por ID
+// GET /api/products/:pid → público
 // ------------------------------------------
 router.get("/:pid", async (req, res) => {
   try {
@@ -73,59 +62,74 @@ router.get("/:pid", async (req, res) => {
 });
 
 // ------------------------------------------
-// POST /api/products → Crear producto
+// POST /api/products → SOLO ADMIN
 // ------------------------------------------
-router.post("/", async (req, res) => {
-  try {
-    const product = await productService.createProduct(req.body);
+router.post(
+  "/",
+  passport.authenticate("jwt", { session: false }),
+  authorization("adm"),
+  async (req, res) => {
+    try {
+      const product = await productService.createProduct(req.body);
 
-    const io = req.app.get("io");
-    io.emit("productAdded", product);
+      const io = req.app.get("io");
+      io.emit("productAdded", product);
 
-    res.status(201).json({
-      status: "success",
-      product
-    });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// ------------------------------------------
-// PUT /api/products/:pid → Actualizar producto
-// ------------------------------------------
-router.put("/:pid", async (req, res) => {
-  try {
-    const updated = await productService.updateProduct(req.params.pid, req.body);
-
-    if (!updated) {
-      return res.status(404).json({ error: "Producto no encontrado" });
+      res.status(201).json({
+        status: "success",
+        product
+      });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
-
-    res.json({ status: "success", updated });
-  } catch (error) {
-    res.status(500).json({ error: "Error actualizando producto" });
   }
-});
+);
 
 // ------------------------------------------
-// DELETE /api/products/:pid → Eliminar producto
+// PUT /api/products/:pid → SOLO ADMIN
 // ------------------------------------------
-router.delete("/:pid", async (req, res) => {
-  try {
-    const deleted = await productService.deleteProduct(req.params.pid);
+router.put(
+  "/:pid",
+  passport.authenticate("jwt", { session: false }),
+  authorization("adm"),
+  async (req, res) => {
+    try {
+      const updated = await productService.updateProduct(req.params.pid, req.body);
 
-    if (!deleted) {
-      return res.status(404).json({ error: "Producto no encontrado" });
+      if (!updated) {
+        return res.status(404).json({ error: "Producto no encontrado" });
+      }
+
+      res.json({ status: "success", updated });
+    } catch (error) {
+      res.status(500).json({ error: "Error actualizando producto" });
     }
-
-    const io = req.app.get("io");
-    io.emit("productDeleted", req.params.pid);
-
-    res.json({ status: "success", deleted });
-  } catch (error) {
-    res.status(500).json({ error: "Error eliminando producto" });
   }
-});
+);
+
+// ------------------------------------------
+// DELETE /api/products/:pid → SOLO ADMIN
+// ------------------------------------------
+router.delete(
+  "/:pid",
+  passport.authenticate("jwt", { session: false }),
+  authorization("adm"),
+  async (req, res) => {
+    try {
+      const deleted = await productService.deleteProduct(req.params.pid);
+
+      if (!deleted) {
+        return res.status(404).json({ error: "Producto no encontrado" });
+      }
+
+      const io = req.app.get("io");
+      io.emit("productDeleted", req.params.pid);
+
+      res.json({ status: "success", deleted });
+    } catch (error) {
+      res.status(500).json({ error: "Error eliminando producto" });
+    }
+  }
+);
 
 export default router;

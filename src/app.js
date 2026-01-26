@@ -1,23 +1,33 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import productsRouter from "./routes/products.router.js";
-import cartsRouter from "./routes/carts.router.js";
-import viewsRouter from "./routes/views.router.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import handlebars from "express-handlebars";
 import mongoose from "mongoose";
+import passport from "passport";
+import cookieParser from "cookie-parser";
 
-// Fix __dirname en ESModules
+import productsRouter from "./routes/products.router.js";
+import cartsRouter from "./routes/carts.router.js";
+import viewsRouter from "./routes/views.router.js";
+import sessionsRouter from "./routes/sessions.router.js";
+
+import initializePassport from "./config/passport.config.js";
+
+// --------------------------------------------
+// FIX __dirname EN ESM
+// --------------------------------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// --------------------------------------------
+// APP + SERVER
+// --------------------------------------------
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
-// ⭐ Hacer IO accesible en los routers
 app.set("io", io);
 
 // --------------------------------------------
@@ -37,9 +47,16 @@ mongoose
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+app.use(cookieParser());
 
 // --------------------------------------------
-// HANDLEBARS CONFIG - SOLUCIÓN AL PROBLEMA
+// PASSPORT
+// --------------------------------------------
+initializePassport();
+app.use(passport.initialize());
+
+// --------------------------------------------
+// HANDLEBARS
 // --------------------------------------------
 app.engine(
   "handlebars",
@@ -61,6 +78,7 @@ app.set("views", path.join(__dirname, "views"));
 // --------------------------------------------
 app.use("/api/products", productsRouter);
 app.use("/api/carts", cartsRouter);
+app.use("/api/sessions", sessionsRouter);
 app.use("/", viewsRouter);
 
 // --------------------------------------------

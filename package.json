@@ -14,10 +14,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
     "express-handlebars": "^8.0.3",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.19.3",
     "mongoose-paginate-v2": "^1.9.1",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
