@@ -32,6 +32,14 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       default: "user"
+    },
+
+    // ✅ CAMPOS PARA RECUPERACIÓN DE PASSWORD
+    resetToken: {
+      type: String
+    },
+    resetTokenExpire: {
+      type: Date
     }
   },
   {

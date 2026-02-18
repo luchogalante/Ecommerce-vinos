@@ -1,145 +1,207 @@
 import { Router } from "express";
 import CartMongoManager from "../managers/CartMongoManager.js";
+import TicketModel from "../models/Ticket.model.js";
+import ProductModel from "../models/Product.model.js";
+import passport from "passport";
+import authorization from "../middlewares/authorization.middleware.js";
+import { v4 as uuidv4 } from "uuid";
 
 const router = Router();
 const cartManager = new CartMongoManager();
 
-// --------------------------------------
-// POST /api/carts → Crear carrito
-// --------------------------------------
-router.post("/", async (req, res) => {
-  try {
-    const cart = await cartManager.createCart();
-    res.status(201).json({
-      status: "success",
-      cart
-    });
-  } catch (error) {
-    console.error("❌ Error creando carrito:", error);
-    res.status(500).json({ error: "Error creando carrito" });
-  }
-});
+// ======================================
+// TODAS LAS RUTAS PROTEGIDAS CON JWT
+// ======================================
 
-// --------------------------------------
-// GET /api/carts/:cid → Obtener carrito con populate
-// --------------------------------------
-router.get("/:cid", async (req, res) => {
-  try {
-    const cart = await cartManager.getCartById(req.params.cid);
-
-    if (!cart) {
-      return res.status(404).json({ error: "Carrito no encontrado" });
+// Crear carrito
+router.post(
+  "/",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    try {
+      const cart = await cartManager.createCart();
+      res.status(201).json({ status: "success", cart });
+    } catch {
+      res.status(500).json({ error: "Error creando carrito" });
     }
-
-    res.json({
-      status: "success",
-      cart
-    });
-  } catch (error) {
-    console.error("❌ Error obteniendo carrito:", error);
-    res.status(500).json({ error: "Error obteniendo carrito" });
   }
-});
+);
 
-// --------------------------------------
-// POST /api/carts/:cid/product/:pid → Agregar producto
-// --------------------------------------
-router.post("/:cid/product/:pid", async (req, res) => {
-  try {
-    const { cid, pid } = req.params;
+// Obtener carrito
+router.get(
+  "/:cid",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    try {
+      const cart = await cartManager.getCartById(req.params.cid);
 
-    const updatedCart = await cartManager.addProductToCart(cid, pid);
+      if (!cart)
+        return res.status(404).json({ error: "Carrito no encontrado" });
 
-    res.json({
-      status: "success",
-      cart: updatedCart
-    });
-  } catch (error) {
-    console.error("❌ Error agregando producto al carrito:", error);
-    res.status(500).json({ error: "Error agregando producto al carrito" });
-  }
-});
-
-// --------------------------------------
-// DELETE /api/carts/:cid/products/:pid → Eliminar un producto del carrito
-// --------------------------------------
-router.delete("/:cid/products/:pid", async (req, res) => {
-  try {
-    const { cid, pid } = req.params;
-
-    const updatedCart = await cartManager.removeProduct(cid, pid);
-
-    if (!updatedCart) {
-      return res.status(404).json({ error: "Carrito o producto no encontrado" });
+      res.json({ status: "success", cart });
+    } catch {
+      res.status(500).json({ error: "Error obteniendo carrito" });
     }
-
-    res.json({ status: "success", cart: updatedCart });
-  } catch (error) {
-    console.error("❌ Error eliminando producto del carrito:", error);
-    res.status(500).json({ error: "Error eliminando producto del carrito" });
   }
-});
+);
 
-// --------------------------------------
-// PUT /api/carts/:cid → Reemplazar TODO el carrito
-// --------------------------------------
-router.put("/:cid", async (req, res) => {
-  try {
-    const { cid } = req.params;
-    const products = req.body.products;
+// ⭐ AGREGAR producto
+router.post(
+  "/:cid/product/:pid",
+  passport.authenticate("jwt", { session: false }),
+  authorization(["user", "admin"]),
+  async (req, res) => {
+    try {
+      const updatedCart = await cartManager.addProductToCart(
+        req.params.cid,
+        req.params.pid
+      );
 
-    const updatedCart = await cartManager.updateCart(cid, products);
-
-    if (!updatedCart) {
-      return res.status(404).json({ error: "Carrito no encontrado" });
+      res.json({ status: "success", cart: updatedCart });
+    } catch {
+      res.status(500).json({ error: "Error agregando producto" });
     }
-
-    res.json({ status: "success", cart: updatedCart });
-  } catch (error) {
-    console.error("❌ Error actualizando carrito:", error);
-    res.status(500).json({ error: "Error actualizando carrito" });
   }
-});
+);
 
-// --------------------------------------
-// PUT /api/carts/:cid/products/:pid → Actualizar cantidad
-// --------------------------------------
-router.put("/:cid/products/:pid", async (req, res) => {
-  try {
-    const { cid, pid } = req.params;
-    const { quantity } = req.body;
+// Eliminar producto
+router.delete(
+  "/:cid/products/:pid",
+  passport.authenticate("jwt", { session: false }),
+  authorization(["user", "admin"]),
+  async (req, res) => {
+    try {
+      const updatedCart = await cartManager.removeProduct(
+        req.params.cid,
+        req.params.pid
+      );
 
-    const updatedCart = await cartManager.updateQuantity(cid, pid, quantity);
+      if (!updatedCart)
+        return res.status(404).json({ error: "No encontrado" });
 
-    if (!updatedCart) {
-      return res.status(404).json({ error: "Carrito o producto no encontrado" });
+      res.json({ status: "success", cart: updatedCart });
+    } catch {
+      res.status(500).json({ error: "Error eliminando producto" });
     }
-
-    res.json({ status: "success", cart: updatedCart });
-  } catch (error) {
-    console.error("❌ Error actualizando cantidad:", error);
-    res.status(500).json({ error: "Error actualizando cantidad" });
   }
-});
+);
 
-// --------------------------------------
-// DELETE /api/carts/:cid → Vaciar carrito completo
-// --------------------------------------
-router.delete("/:cid", async (req, res) => {
-  try {
-    const { cid } = req.params;
+// Reemplazar carrito
+router.put(
+  "/:cid",
+  passport.authenticate("jwt", { session: false }),
+  authorization(["user", "admin"]),
+  async (req, res) => {
+    try {
+      const updatedCart = await cartManager.updateCart(
+        req.params.cid,
+        req.body.products
+      );
 
-    const updatedCart = await cartManager.clearCart(cid);
+      if (!updatedCart)
+        return res.status(404).json({ error: "Carrito no encontrado" });
 
-    if (!updatedCart) {
-      return res.status(404).json({ error: "Carrito no encontrado" });
+      res.json({ status: "success", cart: updatedCart });
+    } catch {
+      res.status(500).json({ error: "Error actualizando carrito" });
     }
-
-    res.json({ status: "success", cart: updatedCart });
-  } catch (error) {
-    console.error("❌ Error vaciando carrito:", error);
-    res.status(500).json({ error: "Error vaciando carrito" });
   }
-});
+);
+
+// Actualizar cantidad
+router.put(
+  "/:cid/products/:pid",
+  passport.authenticate("jwt", { session: false }),
+  authorization(["user", "admin"]),
+  async (req, res) => {
+    try {
+      const updatedCart = await cartManager.updateQuantity(
+        req.params.cid,
+        req.params.pid,
+        req.body.quantity
+      );
+
+      if (!updatedCart)
+        return res.status(404).json({ error: "No encontrado" });
+
+      res.json({ status: "success", cart: updatedCart });
+    } catch {
+      res.status(500).json({ error: "Error actualizando cantidad" });
+    }
+  }
+);
+
+// Vaciar carrito
+router.delete(
+  "/:cid",
+  passport.authenticate("jwt", { session: false }),
+  authorization(["user", "admin"]),
+  async (req, res) => {
+    try {
+      const updatedCart = await cartManager.clearCart(req.params.cid);
+
+      if (!updatedCart)
+        return res.status(404).json({ error: "Carrito no encontrado" });
+
+      res.json({ status: "success", cart: updatedCart });
+    } catch {
+      res.status(500).json({ error: "Error vaciando carrito" });
+    }
+  }
+);
+
+// ======================================
+// ⭐ PURCHASE ⭐
+// ======================================
+router.post(
+  "/:cid/purchase",
+  passport.authenticate("jwt", { session: false }),
+  authorization(["user", "admin"]),
+  async (req, res) => {
+    try {
+      const cart = await cartManager.getCartById(req.params.cid);
+
+      if (!cart)
+        return res.status(404).send({ error: "Carrito no encontrado" });
+
+      let totalAmount = 0;
+      const notPurchased = [];
+
+      for (const item of cart.products) {
+        const product = await ProductModel.findById(item.product._id);
+
+        if (product.stock >= item.quantity) {
+          product.stock -= item.quantity;
+          await product.save();
+          totalAmount += product.price * item.quantity;
+        } else {
+          notPurchased.push(item);
+        }
+      }
+
+      cart.products = notPurchased;
+      await cart.save();
+
+      let ticket = null;
+
+      if (totalAmount > 0) {
+        ticket = await TicketModel.create({
+          code: uuidv4(),
+          amount: totalAmount,
+          purchaser: req.user.email
+        });
+      }
+
+      res.send({
+        status: "success",
+        ticket,
+        notPurchased
+      });
+
+    } catch {
+      res.status(500).send({ error: "Error procesando compra" });
+    }
+  }
+);
 
 export default router;
